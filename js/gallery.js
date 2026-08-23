@@ -20,17 +20,31 @@ const DRIVE_CONFIG = {
 };
 
 document.addEventListener('DOMContentLoaded', () => {
-  loadGallery('galleryGrid', DRIVE_CONFIG.BULLETIN_LIVE_FOLDER_ID, 'bulletins');
-  loadGallery('noticesGrid', DRIVE_CONFIG.NOTICE_LIVE_FOLDER_ID, 'notices');
+  // Assumed counts: painted instantly, before the Drive metadata request
+  // has even gone out, so there's a reserved slot on screen from the very
+  // first frame. Once the real count comes back it replaces this guess —
+  // if the guess was too high/low that one swap still causes a shift, but
+  // it's usually right and removes the "starts at zero" jump entirely.
+  loadGallery('galleryGrid', DRIVE_CONFIG.BULLETIN_LIVE_FOLDER_ID, 'bulletins', 1);
+  loadGallery('noticesGrid', DRIVE_CONFIG.NOTICE_LIVE_FOLDER_ID, 'notices', 2);
 });
 
-async function loadGallery(gridId, folderId, label) {
+async function loadGallery(gridId, folderId, label, assumedCount = 0) {
   const grid = document.getElementById(gridId);
   if (!grid) return;
 
   if (!DRIVE_CONFIG.API_KEY || DRIVE_CONFIG.API_KEY.startsWith('REPLACE_') || !folderId || folderId.startsWith('REPLACE_')) {
     grid.innerHTML = `<div class="gallery-empty">${label} gallery isn't connected yet — add the Drive API key and folder ID in <code>js/gallery.js</code>.</div>`;
     return;
+  }
+
+  // PHASE 0 — fill in the assumed number of generic placeholders right
+  // away, before we even know real counts or types. Type is unknown at
+  // this point so we default to an image-style skeleton (the common
+  // case); it's swapped for the real, correctly-typed placeholder as
+  // soon as the metadata request below resolves.
+  if (assumedCount > 0) {
+    grid.innerHTML = Array.from({ length: assumedCount }, (_, i) => renderGuessPlaceholder(i)).join('');
   }
 
   try {
@@ -62,6 +76,13 @@ async function loadGallery(gridId, folderId, label) {
     console.error(`Could not load ${label} gallery:`, err);
     grid.innerHTML = `<div class="gallery-empty">${label} couldn't be loaded right now. Please check back shortly.</div>`;
   }
+}
+
+function renderGuessPlaceholder(i) {
+  return `
+    <div class="gallery-card inline-viewer" data-idx="${i}">
+      <div class="gallery-body gallery-skeleton" style="aspect-ratio:210/297;"></div>
+    </div>`;
 }
 
 function renderPlaceholder(file, i) {
