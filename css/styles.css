@@ -461,7 +461,7 @@ footer { background:#16262F; color:rgba(255,255,255,0.72); padding:64px 48px 36p
   .hero-card-top-bar { margin: -24px -24px 22px; }
   .section-pad { padding: 56px 16px; }
   .schedule-grid, .gallery-grid { grid-template-columns: 1fr; }
-  .form-embed { height: 1300px; }
+  .form-embed { height: 1000px; }
   .form-footer { flex-direction: column; align-items: flex-start; gap: 14px; }
   .ext-btn { width: 100%; justify-content: center; }
   footer { padding: 48px 16px 28px; }
