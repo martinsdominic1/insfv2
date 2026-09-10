@@ -1,0 +1,55 @@
+:root {
+  --ink: #1f2a24; --paper: #f7f6f2; --card: #ffffff; --line: #dfdccf;
+  --accent: #2f5233; --accent-soft: #e4ede4; --amber: #b8862b; --red: #a4342a; --grey: #7b8078;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+}
+* { box-sizing: border-box; }
+body { margin: 0; background: var(--paper); color: var(--ink); }
+.hidden { display: none !important; }
+h1 { font-weight: 700; margin: 0; }
+label { display: block; font-size: 0.82rem; color: var(--grey); margin-bottom: 12px; }
+input { width: 100%; padding: 9px 10px; margin-top: 4px; border: 1px solid var(--line); border-radius: 8px; font-size: 0.95rem; }
+button { font: inherit; cursor: pointer; border: none; border-radius: 8px; }
+button:disabled { opacity: 0.6; cursor: wait; }
+
+.loading-overlay { position: fixed; inset: 0; background: rgba(247,246,242,0.6); z-index: 100; display: flex; align-items: center; justify-content: center; }
+.spinner { width: 40px; height: 40px; border: 4px solid var(--accent-soft); border-top-color: var(--accent); border-radius: 50%; animation: spin 0.8s linear infinite; }
+@keyframes spin { to { transform: rotate(360deg); } }
+
+.login-screen { min-height: 100vh; display: flex; align-items: center; justify-content: center; padding: 20px; }
+.login-card { background: var(--card); border: 1px solid var(--line); border-radius: 14px; padding: 32px 28px; width: 100%; max-width: 340px; }
+.login-sub { color: var(--grey); margin-top: -8px; margin-bottom: 20px; font-size: 0.9rem; }
+.login-card button { width: 100%; margin-top: 6px; padding: 11px; background: var(--accent); color: #fff; font-weight: 600; }
+.error-text { color: var(--red); font-size: 0.85rem; min-height: 1.2em; margin-top: 10px; }
+
+.topbar { display: flex; align-items: center; justify-content: space-between; padding: 14px 20px; background: var(--card); border-bottom: 1px solid var(--line); }
+.logout-btn { background: transparent; color: var(--grey); font-size: 0.85rem; padding: 6px 10px; }
+main { max-width: 900px; margin: 0 auto; padding: 18px; }
+.hint { color: var(--grey); font-size: 0.85rem; }
+
+.legend { display: flex; gap: 14px; flex-wrap: wrap; margin-bottom: 12px; font-size: 0.8rem; color: var(--grey); align-items: center; }
+.legend-item { display: flex; align-items: center; gap: 6px; }
+.dot { width: 10px; height: 10px; border-radius: 50%; display: inline-block; }
+.dot.pending { background: var(--amber); }
+.dot.accepted { background: var(--accent); }
+.dot.block { background: repeating-linear-gradient(45deg, #999, #999 3px, #ccc 3px, #ccc 6px); }
+
+.fc { background: var(--card); border-radius: 12px; padding: 10px; border: 1px solid var(--line); }
+.fc-event { border: none !important; font-size: 0.78rem; }
+.fc-evt-wrap { display: flex; align-items: center; gap: 4px; padding: 1px 3px; overflow: hidden; }
+.fc-evt-label { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: #23291f; }
+.evt-pending { background: #fbeecb !important; }
+.evt-accepted { background: var(--accent-soft) !important; }
+.evt-block { background: repeating-linear-gradient(45deg, #e5e3da, #e5e3da 4px, #d3d0c3 4px, #d3d0c3 8px) !important; }
+
+.paybadge { width: 13px; height: 13px; border-radius: 50%; flex-shrink: 0; display: inline-flex; align-items: center; justify-content: center; font-size: 9px; font-weight: 800; line-height: 1; }
+.paybadge.pending-pay { border: 2px solid #2f6fa3; background: transparent; position: relative; }
+.paybadge.pending-pay::before { content: ''; position: absolute; width: 1px; height: 4px; background: #2f6fa3; top: 2px; left: 50%; }
+.paybadge.pending-pay::after { content: ''; position: absolute; width: 3px; height: 1px; background: #2f6fa3; top: 5px; left: 50%; }
+.paybadge.partial-pay { border: 2px solid #2f6fa3; background: linear-gradient(90deg, #2f6fa3 50%, transparent 50%); }
+.paybadge.paid-pay { background: #2f6fa3; color: #fff; }
+
+@media (max-width: 600px) {
+  .topbar { padding: 12px 14px; }
+  main { padding: 12px; }
+}
