@@ -1,0 +1,165 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Hall Manager</title>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/fullcalendar@6.1.11/index.global.min.css">
+<link rel="stylesheet" href="css/styles.css">
+</head>
+<body>
+
+<div id="loadingOverlay" class="loading-overlay hidden">
+  <div class="spinner"></div>
+</div>
+
+<!-- ============ LOGIN ============ -->
+<div id="loginScreen" class="login-screen">
+  <form id="loginForm" class="login-card">
+    <h1>Hall Manager</h1>
+    <p class="login-sub">Sign in to manage bookings</p>
+    <label for="username">Username</label>
+    <input type="text" id="username" autocomplete="username" required>
+    <label for="password">Password</label>
+    <input type="password" id="password" autocomplete="current-password" required>
+    <button type="submit" id="loginBtn">Sign in</button>
+    <p id="loginError" class="error-text"></p>
+  </form>
+</div>
+
+<!-- ============ APP SHELL ============ -->
+<div id="app" class="app hidden">
+  <header class="topbar">
+    <h1>Hall Manager</h1>
+    <nav class="tabs">
+      <button class="tab-btn active" data-tab="calendarView">Calendar</button>
+      <button class="tab-btn" data-tab="listView">Applications</button>
+    </nav>
+    <button id="logoutBtn" class="logout-btn">Sign out</button>
+  </header>
+
+  <main>
+    <!-- ---------- CALENDAR ---------- -->
+    <section id="calendarView" class="view active">
+      <div class="legend">
+        <span class="legend-item"><i class="dot pending"></i>Pending</span>
+        <span class="legend-item"><i class="dot accepted"></i>Accepted</span>
+        <span class="legend-item"><i class="dot block"></i>Setup / Teardown / Internal</span>
+        <span class="legend-item"><i class="paybadge pending-pay" title="Payment pending"></i>Payment pending</span>
+        <span class="legend-item"><i class="paybadge partial-pay" title="Partially paid"></i>Partially paid</span>
+        <span class="legend-item"><i class="paybadge paid-pay" title="Paid">$</i>Paid</span>
+        <span class="legend-item"><i class="clash-sample"></i>Overlap (warning only)</span>
+      </div>
+      <div id="calendar"></div>
+      <button id="addBlockBtn" class="primary-btn add-block-btn">+ Add setup / teardown / internal block</button>
+    </section>
+
+    <!-- ---------- LIST VIEW ---------- -->
+    <section id="listView" class="view">
+      <div class="toolbar-row">
+        <input type="text" id="searchBox" placeholder="Search by name, event type, or ID…">
+        <button id="newAppBtn" class="primary-btn">+ New Application</button>
+      </div>
+      <div class="filter-bar">
+        <button class="filter-chip active" data-status="all">All</button>
+        <button class="filter-chip" data-status="Pending">Pending</button>
+        <button class="filter-chip" data-status="Accepted">Accepted</button>
+        <button class="filter-chip" data-status="Denied">Denied</button>
+        <button class="filter-chip" data-status="Cancelled">Cancelled</button>
+      </div>
+      <div id="applicationList" class="card-list"></div>
+    </section>
+  </main>
+</div>
+
+<!-- ============ APPLICATION DETAIL MODAL ============ -->
+<div id="detailModal" class="modal hidden">
+  <div class="modal-card wide" id="detailModalCard"></div>
+</div>
+
+<!-- ============ GENERIC EMAIL POPUP (Cancel / Send / Save to Draft) ============ -->
+<div id="emailModal" class="modal hidden">
+  <div class="modal-card">
+    <h2 id="emailModalTitle">Review email</h2>
+    <label>To <input type="text" id="emailTo" disabled></label>
+    <label>Subject <input type="text" id="emailSubject"></label>
+    <label>Message <textarea id="emailBody" rows="8"></textarea></label>
+    <div class="attachment-list">
+      <strong>Attachments:</strong>
+      <ul id="emailAttachmentList"></ul>
+    </div>
+    <div class="modal-actions three">
+      <button id="emailCancelBtn" class="secondary-btn">Cancel</button>
+      <button id="emailDraftBtn" class="secondary-btn">Save to Draft</button>
+      <button id="emailSendBtn" class="primary-btn">Send</button>
+    </div>
+  </div>
+</div>
+
+<!-- ============ REASON MODAL (deny / cancel) ============ -->
+<div id="reasonModal" class="modal hidden">
+  <div class="modal-card">
+    <h2 id="reasonModalTitle">Reason</h2>
+    <label>Reason <select id="reasonSelect"></select></label>
+    <label id="reasonOtherWrap" class="hidden">Please specify <input type="text" id="reasonOther"></label>
+    <div id="refundWrap" class="hidden">
+      <label>Refund amount (R) <input type="number" id="refundAmount" step="0.01"></label>
+      <label>Refund status
+        <select id="refundStatus"><option value="Pending">Pending</option><option value="Completed">Completed</option></select>
+      </label>
+    </div>
+    <div class="modal-actions">
+      <button id="reasonCancelBtn" class="secondary-btn">Cancel</button>
+      <button id="reasonConfirmBtn" class="primary-btn">Confirm</button>
+    </div>
+  </div>
+</div>
+
+<!-- ============ ADD CHARGE MODAL ============ -->
+<div id="chargeModal" class="modal hidden">
+  <div class="modal-card">
+    <h2>Add charge</h2>
+    <label>Type
+      <select id="chargeType"><option value="Catalog">From price list</option><option value="Custom">Custom item</option></select>
+    </label>
+    <div id="chargeCatalogWrap">
+      <label>Item <select id="chargeCatalogItem"></select></label>
+      <label>Quantity <input type="number" id="chargeQty" value="1" min="1"></label>
+    </div>
+    <div id="chargeCustomWrap" class="hidden">
+      <label>Description <input type="text" id="chargeDescription"></label>
+      <label>Amount (R) <input type="number" id="chargeAmount" step="0.01"></label>
+    </div>
+    <div class="modal-actions">
+      <button id="chargeCancelBtn" class="secondary-btn">Cancel</button>
+      <button id="chargeSaveBtn" class="primary-btn">Add</button>
+    </div>
+  </div>
+</div>
+
+<!-- ============ BLOCK CREATE/EDIT MODAL ============ -->
+<div id="blockModal" class="modal hidden">
+  <div class="modal-card">
+    <h2 id="blockModalTitle">New block</h2>
+    <label>Label <input type="text" id="blockLabel"></label>
+    <label>Type
+      <select id="blockType"><option value="Setup">Setup</option><option value="Teardown">Teardown</option><option value="Internal">Internal</option></select>
+    </label>
+    <label>Linked application ID (optional) <input type="text" id="blockLinkedId"></label>
+    <label>Start <input type="datetime-local" id="blockStart"></label>
+    <label>End <input type="datetime-local" id="blockEnd"></label>
+    <label>Notes <input type="text" id="blockNotes"></label>
+    <div class="modal-actions">
+      <button id="blockCancelBtn" class="secondary-btn">Cancel</button>
+      <button id="blockSaveBtn" class="primary-btn">Save block</button>
+    </div>
+  </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/fullcalendar@6.1.11/index.global.min.js"></script>
+<script src="js/config.js"></script>
+<script src="js/api.js"></script>
+<script src="js/app.js"></script>
+<script src="js/calendar.js"></script>
+</body>
+</html>
