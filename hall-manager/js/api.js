@@ -44,7 +44,7 @@ const Api = (() => {
     updateCharge: (id, fields, applicationId) => call('updateCharge', { id, fields, applicationId }),
 
     prepareEmail: (id, emailType) => call('prepareEmail', { id, emailType }),
-    dispatchEmail: (id, emailType, subject, body, action) => call('dispatchEmail', { id, emailType, subject, body, action }),
+    dispatchEmail: (id, emailType, subject, body, action) => call('dispatchEmail', { id, emailType, subject, body, emailAction: action }),
 
     uploadDamageMedia: (applicationId, fileName, mimeType, base64Data) =>
       call('uploadDamageMedia', { applicationId, fileName, mimeType, base64Data }),
