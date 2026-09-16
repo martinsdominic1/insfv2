@@ -291,7 +291,7 @@ function renderDetail(card, a, isNew) {
           ${editing ? '<button type="button" id="addCustomItemBtn" class="secondary-btn">+ Add custom item</button>' : ''}
         </div>
         <div class="field-grid">
-          <label>Overall discount % (${STATE.config.discountMinPct} to ${STATE.config.discountMaxPct})
+          <label>Overall discount %
             <input type="number" data-field="OverallDiscountPct" value="${Number(a.OverallDiscountPct) || 0}" ${editing ? '' : 'disabled'}
                    min="${STATE.config.discountMinPct}" max="${STATE.config.discountMaxPct}">
           </label>
@@ -545,7 +545,7 @@ function updateUnseatedAndCaps(card) {
   const seated = get('RoundTableCount') * 10 + get('RectTableCount') * 10 + get('LongRectTableCount') * 10; // Config default capacity=10; real per-item capacity is applied server-side on Generate Price
   const unseated = guestCount - seated;
   const line = card.querySelector('#unseatedLine');
-  if (line) line.textContent = 'Unseated guests (informational, based on default capacities — final figure confirmed on Generate Price): ' + unseated;
+  if (line) line.textContent = 'Unseated guests (informational): ' + unseated;
 
   const warnings = [];
   QUOTE_ITEMS.forEach(qi => {
