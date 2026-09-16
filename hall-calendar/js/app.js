@@ -18,7 +18,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const btn = document.getElementById('partialSummaryBtn');
     btn.disabled = true; btn.textContent = 'Sending…';
     const res = await Api.sendPartialSummary();
-    btn.disabled = false; btn.textContent = "Send month's summary so far (to me only)";
+    btn.disabled = false; btn.textContent = "📧 Send month's summary so far (to me only)";
     alert(res.ok ? 'Sent — check your own inbox.' : 'Could not send: ' + (res.error || 'unknown error'));
   });
   if (Api.getToken()) boot();
