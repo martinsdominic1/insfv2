@@ -1,0 +1,52 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Help — Hall Manager</title>
+<link rel="stylesheet" href="css/styles.css">
+</head>
+<body>
+<div id="loadingOverlay" class="loading-overlay"><div class="spinner"></div></div>
+<header class="topbar"><h1>Help</h1></header>
+<main>
+  <p class="hint">These open in a new tab. New videos or an updated manual can simply be uploaded to the help Drive folder — no changes needed here.</p>
+  <div id="helpList" class="card-list"></div>
+  <p id="helpEmpty" class="empty-state hidden">No help materials found. Check that HELP_FOLDER_ID is set in Script Properties, and that the folder contains 'pdf' and 'videos' subfolders.</p>
+</main>
+<script src="js/config.js"></script>
+<script src="js/api.js"></script>
+<script>
+(async () => {
+  // This page is opened in a fresh tab, so it takes its session token
+  // from the URL rather than relying on sessionStorage being shared
+  // across tabs (not guaranteed in every browser).
+  const params = new URLSearchParams(window.location.search);
+  const token = params.get('token');
+  if (token) sessionStorage.setItem('hm_token', token);
+
+  const overlay = document.getElementById('loadingOverlay');
+  const res = await Api.getHelpFiles();
+  overlay.classList.add('hidden');
+
+  const list = document.getElementById('helpList');
+  const items = [];
+  if (res.ok && res.manualUrl) {
+    items.push(`<a class="app-card" href="${res.manualUrl}" target="_blank" rel="noopener"><strong>📄 PDF Manual</strong></a>`);
+  }
+  if (res.ok && res.videos && res.videos.length) {
+    res.videos.forEach(v => {
+      items.push(`<a class="app-card" href="${v.url}" target="_blank" rel="noopener"><strong>${v.sortKey}. ${escapeHtml(v.label)}</strong></a>`);
+    });
+  }
+  if (items.length) {
+    list.innerHTML = items.join('');
+  } else {
+    document.getElementById('helpEmpty').classList.remove('hidden');
+  }
+
+  function escapeHtml(s) { return String(s == null ? '' : s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
+})();
+</script>
+</body>
+</html>

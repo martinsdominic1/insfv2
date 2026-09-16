@@ -63,8 +63,12 @@ function renderCalendar() {
         });
       }
     },
-    selectable: true,
-    select: (info) => openBlockModal(null, { type: 'Internal', startDateTime: info.startStr, endDateTime: info.endStr })
+    selectable: false,
+    // dateClick (not `select`) is what makes this work identically on a
+    // mouse click and a phone tap — `select` needs FullCalendar's touch
+    // long-press (1s hold) to register on mobile, which is why day-click
+    // previously only worked on desktop.
+    dateClick: (info) => openBlockModal(null, { type: 'Internal', startDateTime: info.dateStr, endDateTime: info.dateStr })
   });
   CAL.render();
 }
@@ -72,6 +76,13 @@ function renderCalendar() {
 function buildCalendarEvents() {
   const apps = STATE.applications.filter(a => a.Status === 'Pending' || a.Status === 'Accepted');
   const clashingIds = findClashes(apps, STATE.blocks);
+
+  // A block linked to a Denied/Cancelled application is no longer
+  // relevant — the event it was set up for isn't happening.
+  const deniedOrCancelledIds = new Set(
+    STATE.applications.filter(a => a.Status === 'Denied' || a.Status === 'Cancelled').map(a => a.ID)
+  );
+  const visibleBlocks = STATE.blocks.filter(b => !b.LinkedApplicationID || !deniedOrCancelledIds.has(b.LinkedApplicationID));
 
   const appEvents = apps.map(a => ({
     id: 'app-' + a.ID,
@@ -85,7 +96,7 @@ function buildCalendarEvents() {
     extendedProps: { kind: 'application', appId: a.ID, paymentStatus: a.PaymentStatus }
   }));
 
-  const blockEvents = STATE.blocks.map(b => ({
+  const blockEvents = visibleBlocks.map(b => ({
     id: 'blk-' + b.ID,
     title: '[' + b.Type + '] ' + b.Label,
     start: b.StartDateTime,

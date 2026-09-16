@@ -35,6 +35,7 @@
       <button class="tab-btn active" data-tab="calendarView">Calendar</button>
       <button class="tab-btn" data-tab="listView">Applications</button>
     </nav>
+    <button id="helpBtn" class="logout-btn" title="Help">Help</button>
     <button id="logoutBtn" class="logout-btn">Sign out</button>
   </header>
 
@@ -66,6 +67,13 @@
         <button class="filter-chip" data-status="Accepted">Accepted</button>
         <button class="filter-chip" data-status="Denied">Denied</button>
         <button class="filter-chip" data-status="Cancelled">Cancelled</button>
+      </div>
+      <div class="filter-bar">
+        <button class="filter-chip-secondary active" data-secondary="all">Any payment</button>
+        <button class="filter-chip-secondary" data-secondary="Unpaid">Unpaid</button>
+        <button class="filter-chip-secondary" data-secondary="Partial">Partial Paid</button>
+        <button class="filter-chip-secondary" data-secondary="Paid">Paid</button>
+        <button class="filter-chip-secondary" data-secondary="Upcoming">Upcoming</button>
       </div>
       <div id="applicationList" class="card-list"></div>
     </section>

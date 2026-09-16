@@ -51,6 +51,7 @@ const Api = (() => {
     getDamageMedia: (applicationId) => call('getDamageMedia', { applicationId }),
     uploadProofOfPayment: (applicationId, fileName, mimeType, base64Data) =>
       call('uploadProofOfPayment', { applicationId, fileName, mimeType, base64Data }),
-    getProofOfPayment: (applicationId) => call('getProofOfPayment', { applicationId })
+    getProofOfPayment: (applicationId) => call('getProofOfPayment', { applicationId }),
+    getHelpFiles: () => call('getHelpFiles')
   };
 })();

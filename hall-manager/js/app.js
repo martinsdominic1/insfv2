@@ -3,6 +3,7 @@ let STATE = {
   blocks: [],
   config: { reasons: [], rateLines: [], floorSections: [], depositDefaultPct: 20, discountMinPct: -200, discountMaxPct: 200, vatRatePct: 15 },
   currentFilter: 'all',
+  secondaryFilter: 'all',
   searchText: '',
   pendingReasonCallback: null,
   pendingEmail: null // { id, emailType }
@@ -10,20 +11,22 @@ let STATE = {
 
 // Items with a per-line discount input in the quote builder (must match
 // Config's rate-line "Item" names exactly, since discounts are keyed by name).
+const TABLE_ITEMS = [
+  { field: 'RoundTableCount', item: 'Round Table', label: 'Round Tables', type: 'number', seatsField: true },
+  { field: 'RectTableCount', item: 'Rectangular Table', label: 'Rectangular Tables', type: 'number', seatsField: true },
+  { field: 'LongRectTableCount', item: 'Long Rectangular Table', label: 'Long Rectangular Tables', type: 'number', seatsField: true }
+];
 const QUOTE_ITEMS = [
-  { field: 'RoundTableCount', item: 'Round Table', label: 'Round tables', type: 'number' },
-  { field: 'RectTableCount', item: 'Rectangular Table', label: 'Rectangular tables', type: 'number' },
-  { field: 'LongRectTableCount', item: 'Long Rectangular Table', label: 'Long rectangular tables', type: 'number' },
   { field: 'ChairCount', item: 'Chairs', label: 'Chairs', type: 'number' },
   { field: 'StageRequired', item: 'Stage', label: 'Stage', type: 'yesno' },
   { field: 'KitchenRequired', item: 'Kitchen', label: 'Kitchen', type: 'yesno' },
   { field: 'TuckshopRequired', item: 'Tuckshop', label: 'Tuckshop', type: 'yesno' },
   { field: 'MainPlates', item: 'Main Plates', label: 'Main plates', type: 'number' },
   { field: 'SidePlates', item: 'Side Plates', label: 'Side plates', type: 'number' },
-  { field: 'Knives', item: 'Knives', label: 'Knives', type: 'number' },
-  { field: 'Forks', item: 'Forks', label: 'Forks', type: 'number' },
-  { field: 'TableSpoons', item: 'Table Spoons', label: 'Table spoons', type: 'number' },
-  { field: 'TeaSpoons', item: 'Tea Spoons', label: 'Tea spoons', type: 'number' },
+  { field: 'Knives', item: 'Knives', label: 'Knives (packs of 10)', type: 'number' },
+  { field: 'Forks', item: 'Forks', label: 'Forks (packs of 10)', type: 'number' },
+  { field: 'TableSpoons', item: 'Table Spoons', label: 'Table spoons (packs of 10)', type: 'number' },
+  { field: 'TeaSpoons', item: 'Tea Spoons', label: 'Tea spoons (packs of 10)', type: 'number' },
   { field: 'Mugs', item: 'Mugs', label: 'Mugs', type: 'number' },
   { field: 'TeaCups', item: 'Tea Cups', label: 'Tea cups', type: 'number' },
   { field: 'LargeTumblers', item: 'Large Tumblers', label: 'Large tumblers', type: 'number' },
@@ -48,6 +51,17 @@ document.addEventListener('DOMContentLoaded', () => {
   wireReasonModal();
   wireChargeModal();
   wireBlockModal();
+  wireHelpButton();
+  // Esc / click-away closes the applicant detail card only (per the
+  // agreed scope — not the other modals), same as the Close button.
+  document.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape' && !document.getElementById('detailModal').classList.contains('hidden')) {
+      document.getElementById('detailModal').classList.add('hidden');
+    }
+  });
+  document.getElementById('detailModal').addEventListener('click', (e) => {
+    if (e.target.id === 'detailModal') e.target.classList.add('hidden');
+  });
   if (Api.getToken()) boot();
 });
 
@@ -129,10 +143,23 @@ function wireSearchAndFilter() {
       renderList();
     });
   });
+  document.querySelectorAll('.filter-chip-secondary').forEach(chip => {
+    chip.addEventListener('click', () => {
+      document.querySelectorAll('.filter-chip-secondary').forEach(c => c.classList.remove('active'));
+      chip.classList.add('active');
+      STATE.secondaryFilter = chip.dataset.secondary;
+      renderList();
+    });
+  });
 }
 
 function wireNewApplication() {
   document.getElementById('newAppBtn').addEventListener('click', () => openDetail(null));
+}
+function wireHelpButton() {
+  document.getElementById('helpBtn').addEventListener('click', () => {
+    window.open('help.html?token=' + encodeURIComponent(Api.getToken()), '_blank');
+  });
 }
 
 // ---------------------------------------------------------------
@@ -141,6 +168,16 @@ function wireNewApplication() {
 function renderList() {
   const container = document.getElementById('applicationList');
   let items = STATE.applications.filter(a => STATE.currentFilter === 'all' || a.Status === STATE.currentFilter);
+  if (STATE.secondaryFilter && STATE.secondaryFilter !== 'all') {
+    const now = new Date();
+    items = items.filter(a => {
+      if (STATE.secondaryFilter === 'Unpaid') return (a.PaymentStatus || 'Pending') === 'Pending';
+      if (STATE.secondaryFilter === 'Partial') return a.PaymentStatus === 'Partial';
+      if (STATE.secondaryFilter === 'Paid') return a.PaymentStatus === 'Paid';
+      if (STATE.secondaryFilter === 'Upcoming') return a.Status === 'Accepted' && a.StartDateTime && new Date(a.StartDateTime) > now;
+      return true;
+    });
+  }
   if (STATE.searchText) {
     items = items.filter(a =>
       (a.ApplicantName || '').toLowerCase().includes(STATE.searchText) ||
@@ -208,6 +245,7 @@ function renderDetail(card, a, isNew) {
       </div>
       ${!isNew ? `<div class="contact-actions">
         <a class="secondary-btn contact-btn" href="tel:${escapeAttr(a.ApplicantPhone || '')}">Call applicant</a>
+        <a class="secondary-btn contact-btn" href="${whatsappLink(a.ApplicantPhone, a.ApplicantName)}" target="_blank" rel="noopener">WhatsApp applicant</a>
         <a class="secondary-btn contact-btn" href="mailto:${escapeAttr(a.ApplicantEmail || '')}">Email applicant</a>
       </div>` : ''}
     </div>
@@ -229,25 +267,38 @@ function renderDetail(card, a, isNew) {
 
     <div class="detail-section">
       <h3>Quote Parameters</h3>
-      ${renderQuoteFields(a, editing)}
-      <div class="field-grid">
-        <div class="floor-section-picker">
-          <label class="section-heading-label">Floor Section(s) — select all that apply</label>
-          ${renderFloorSectionCheckboxes(a, editing)}
+      <button type="button" id="toggleQuoteParamsBtn" class="secondary-btn">${editing ? 'Hide' : 'See'} quoting parameters</button>
+      <div id="quoteParamsBody" class="${editing ? '' : 'hidden'}">
+        <h4 class="section-heading-label">Tables</h4>
+        ${renderTableFields(a, editing)}
+        <p id="unseatedLine" class="hint"></p>
+        ${renderQuoteFields(a, editing)}
+        <div class="two-col-section">
+          <div class="floor-section-picker">
+            <label class="section-heading-label">Floor Section(s) — select all that apply</label>
+            ${renderFloorSectionCheckboxes(a, editing)}
+          </div>
+          <div class="guard-time-col">
+            ${dtField('CarGuardStart', 'Car guard start', a.CarGuardStart, editing)}
+            ${dtField('CarGuardEnd', 'Car guard end', a.CarGuardEnd, editing)}
+            <img src="img/sectional_layout.png" class="sectional-layout-img" alt="Hall sectional layout diagram" onerror="this.style.display='none'">
+          </div>
         </div>
-        ${dtField('CarGuardStart', 'Car guard start', a.CarGuardStart, editing)}
-        ${dtField('CarGuardEnd', 'Car guard end', a.CarGuardEnd, editing)}
-      </div>
-      <p id="unseatedLine" class="hint"></p>
-      <p id="capWarnings" class="warning-text"></p>
-      <div class="field-grid">
-        <label>Overall discount % (${STATE.config.discountMinPct} to ${STATE.config.discountMaxPct})
-          <input type="number" data-field="OverallDiscountPct" value="${Number(a.OverallDiscountPct) || 0}" ${editing ? '' : 'disabled'}
-                 min="${STATE.config.discountMinPct}" max="${STATE.config.discountMaxPct}">
-        </label>
-        <label>Deposit %
-          <input type="number" data-field="DepositPct" value="${a.DepositPct != null ? a.DepositPct : STATE.config.depositDefaultPct}" ${editing ? '' : 'disabled'} min="0" max="100">
-        </label>
+        <p id="capWarnings" class="warning-text"></p>
+        <div class="detail-section-sub">
+          <h4 class="section-heading-label">Custom Items</h4>
+          <div id="customItemsList">${renderCustomItems(a, editing)}</div>
+          ${editing ? '<button type="button" id="addCustomItemBtn" class="secondary-btn">+ Add custom item</button>' : ''}
+        </div>
+        <div class="field-grid">
+          <label>Overall discount % (${STATE.config.discountMinPct} to ${STATE.config.discountMaxPct})
+            <input type="number" data-field="OverallDiscountPct" value="${Number(a.OverallDiscountPct) || 0}" ${editing ? '' : 'disabled'}
+                   min="${STATE.config.discountMinPct}" max="${STATE.config.discountMaxPct}">
+          </label>
+          <label>Deposit %
+            <input type="number" data-field="DepositPct" value="${a.DepositPct != null ? a.DepositPct : STATE.config.depositDefaultPct}" ${editing ? '' : 'disabled'} min="0" max="100">
+          </label>
+        </div>
       </div>
       ${editing ? `<button id="generatePriceBtn" class="primary-btn" ${isNew ? 'disabled title="Save the application first"' : ''}>Generate Price</button>` : ''}
       <div id="quoteOutput">${a.QuoteTotal ? renderQuoteOutput(a) : ''}</div>
@@ -257,7 +308,7 @@ function renderDetail(card, a, isNew) {
     ${!isNew ? renderEmailSection(a) : ''}
     ${!isNew ? renderPaymentSection(a) : ''}
     ${!isNew ? renderChargesSection(a) : ''}
-    ${!isNew ? renderMediaSection(a) : ''}
+    ${!isNew ? renderMediaSection(a, editing) : ''}
 
     <div class="modal-actions">
       <button id="closeDetailBtn" class="secondary-btn">Close</button>
@@ -295,6 +346,40 @@ function renderQuoteFields(a, editing) {
     </div>`;
   }).join('');
 }
+function renderTableFields(a, editing) {
+  let discounts = {};
+  try { discounts = JSON.parse(a.LineDiscountsJSON || '{}'); } catch (e) {}
+  return TABLE_ITEMS.map(qi => {
+    const val = a[qi.field];
+    if (!editing && (!val || Number(val) === 0)) return '';
+    const rl = STATE.config.rateLines.find(r => r.item === qi.item);
+    const seats = rl ? rl.seatingCapacity : '?';
+    return `<div class="quote-row">
+      <label class="quote-label">${qi.label} (seats ${seats} each)
+        <input type="number" data-field="${qi.field}" data-numeric="true" value="${val || 0}" min="0" ${editing ? '' : 'disabled'}>
+      </label>
+      ${editing ? discountInput(qi.item, discounts[qi.item]) : ''}
+    </div>`;
+  }).join('');
+}
+
+// Manager-defined custom quote items: name, unit price, quantity — no
+// preset rate list, no discount field (the manager sets the price
+// directly). Stored as JSON on the application.
+function renderCustomItems(a, editing) {
+  let items = [];
+  try { items = JSON.parse(a.CustomQuoteItemsJSON || '[]'); } catch (e) {}
+  if (!items.length) return editing ? '<p class="hint">None added.</p>' : '<p class="hint">No custom items.</p>';
+  return items.map((ci, i) => editing ? `
+    <div class="quote-row custom-item-row" data-index="${i}">
+      <input type="text" class="custom-item-name" placeholder="Item name" value="${escapeAttr(ci.name)}">
+      <input type="number" class="custom-item-rate" placeholder="R per unit" value="${ci.unitPrice}" step="0.01" style="width:110px">
+      <input type="number" class="custom-item-qty" placeholder="Qty" value="${ci.qty}" min="0" style="width:80px">
+      <button type="button" class="icon-btn remove-custom-item" data-index="${i}">✕</button>
+    </div>` : `<div class="charge-row"><span>${escapeHtml(ci.name)} x${ci.qty}</span><span>R${(Number(ci.unitPrice) * Number(ci.qty)).toFixed(2)}</span></div>`
+  ).join('');
+}
+
 function discountInput(itemName, value) {
   return `<label class="discount-label">disc %
     <input type="number" class="line-discount" data-item="${escapeAttr(itemName)}" value="${value || 0}"
@@ -330,13 +415,13 @@ function renderQuoteOutput(a) {
 }
 
 function renderStatusSection(a) {
+  const isAccepted = a.Status === 'Accepted';
   return `<div class="detail-section">
-    <h3>Status</h3>
+    <div class="status-line"><h3>Status:</h3> <span class="pill pill-${slug(a.Status)}">${a.Status}</span></div>
     <div class="status-row">
-      <span class="pill pill-${slug(a.Status)}">${a.Status}</span>
-      <button class="secondary-btn" data-act="accept">Accept</button>
-      <button class="secondary-btn" data-act="deny">Deny</button>
-      <button class="secondary-btn" data-act="cancel">Mark Cancelled</button>
+      ${!isAccepted ? '<button class="secondary-btn" data-act="accept">Accept</button>' : ''}
+      ${!isAccepted ? '<button class="secondary-btn" data-act="deny">Deny</button>' : ''}
+      ${isAccepted ? '<button class="secondary-btn" data-act="cancel">Cancel</button>' : ''}
     </div>
     ${a.DenialReason ? `<p class="hint">Reason on file: ${escapeHtml(a.DenialReason)}${a.DenialReasonOther ? ' — ' + escapeHtml(a.DenialReasonOther) : ''}</p>` : ''}
     ${a.RefundAmount ? `<p class="hint">Refund: R${Number(a.RefundAmount).toFixed(2)} (${a.RefundStatus})</p>` : ''}
@@ -388,9 +473,12 @@ function renderChargesSection(a) {
   </div>`;
 }
 
-function renderMediaSection(a) {
+function renderMediaSection(a, editing) {
   return `<div class="detail-section">
     <h3>Damages Media</h3>
+    <label>Damages notes
+      <textarea data-field="DamagesNotes" rows="3" ${editing ? '' : 'readonly'} placeholder="Explain any damages shown in the photos/videos below">${escapeHtml(a.DamagesNotes || '')}</textarea>
+    </label>
     <label class="file-btn secondary-btn">Upload photo/video<input type="file" id="damageUploadInput" accept="image/*,video/*" hidden></label>
     <div id="damageMediaList" class="media-list"></div>
   </div>`;
@@ -509,6 +597,30 @@ function wireDetailInteractions(card, a, isNew, editing) {
     else alert(res.error || 'Could not generate price');
   }));
 
+  const toggleBtn = document.getElementById('toggleQuoteParamsBtn');
+  if (toggleBtn) toggleBtn.addEventListener('click', () => {
+    const body = document.getElementById('quoteParamsBody');
+    const nowHidden = body.classList.toggle('hidden');
+    toggleBtn.textContent = (nowHidden ? 'See' : 'Hide') + ' quoting parameters';
+  });
+
+  if (editing) {
+    const addCustomBtn = document.getElementById('addCustomItemBtn');
+    if (addCustomBtn) addCustomBtn.addEventListener('click', () => {
+      const list = document.getElementById('customItemsList');
+      const row = document.createElement('div');
+      row.className = 'quote-row custom-item-row';
+      row.innerHTML = `
+        <input type="text" class="custom-item-name" placeholder="Item name">
+        <input type="number" class="custom-item-rate" placeholder="R per unit" step="0.01" style="width:110px">
+        <input type="number" class="custom-item-qty" placeholder="Qty" min="0" style="width:80px">
+        <button type="button" class="icon-btn remove-custom-item">✕</button>`;
+      list.appendChild(row);
+      row.querySelector('.remove-custom-item').addEventListener('click', () => row.remove());
+    });
+    card.querySelectorAll('.remove-custom-item').forEach(btn => btn.addEventListener('click', (e) => e.target.closest('.custom-item-row').remove()));
+  }
+
   if (!isNew) {
     card.querySelectorAll('[data-act]').forEach(btn => btn.addEventListener('click', () => handleStatusAction(btn.dataset.act, a)));
     card.querySelectorAll('[data-email]').forEach(btn => btn.addEventListener('click', () => openEmailPopup(a.ID, btn.dataset.email)));
@@ -545,6 +657,16 @@ function collectFields(card) {
   const discounts = {};
   card.querySelectorAll('.line-discount').forEach(el => { if (Number(el.value)) discounts[el.dataset.item] = Number(el.value); });
   fields.LineDiscountsJSON = JSON.stringify(discounts);
+
+  const customItems = [];
+  card.querySelectorAll('.custom-item-row').forEach(row => {
+    const name = row.querySelector('.custom-item-name')?.value?.trim();
+    const unitPrice = Number(row.querySelector('.custom-item-rate')?.value) || 0;
+    const qty = Number(row.querySelector('.custom-item-qty')?.value) || 0;
+    if (name && qty > 0) customItems.push({ name, unitPrice, qty });
+  });
+  fields.CustomQuoteItemsJSON = JSON.stringify(customItems);
+
   return fields;
 }
 
@@ -564,7 +686,7 @@ async function doSetStatus(id, status, reason, reasonOther, refundAmount, refund
     await loadAll();
     if (status === 'Accepted') openEmailPopupAsk(id, 'Accept');
     else if (status === 'Denied') openEmailPopupAsk(id, 'Deny');
-    else if (status === 'Cancelled' && res.hadPayment) openEmailPopupAsk(id, 'RefundConfirmation');
+    else if (status === 'Cancelled') openEmailPopupAsk(id, res.hadPayment ? 'RefundConfirmation' : 'CancelConfirmation');
     else openDetail(id);
   } else alert(res.error || 'Could not update status');
 }
@@ -621,8 +743,15 @@ async function finishEmail(action) {
   const btn = action === 'send' ? document.getElementById('emailSendBtn') : action === 'draft' ? document.getElementById('emailDraftBtn') : document.getElementById('emailCancelBtn');
   await withButtonLoading(btn, action === 'send' ? 'Sending…' : action === 'draft' ? 'Saving…' : 'Cancelling…', async () => {
     if (action !== 'cancel' && pending) {
-      await Api.dispatchEmail(pending.id, pending.emailType,
+      const res = await Api.dispatchEmail(pending.id, pending.emailType,
         document.getElementById('emailSubject').value, document.getElementById('emailBody').value, action);
+      if (!res.ok) {
+        // Surface the real failure instead of silently closing the popup —
+        // this was previously swallowed, making every failure look like
+        // nothing happened at all.
+        alert('Could not ' + (action === 'send' ? 'send' : 'save') + ' this email: ' + (res.error || 'unknown error'));
+        return; // leave the popup open so the manager can retry
+      }
     }
     document.getElementById('emailModal').classList.add('hidden');
     document.getElementById('detailModal').classList.add('hidden');
@@ -772,7 +901,30 @@ async function loadProofs(card, applicationId) {
 // UTILS
 // ---------------------------------------------------------------
 function slug(s) { return String(s || '').toLowerCase().replace(/\s+/g, '-'); }
-function fmtDate(d) { if (!d) return ''; const dt = new Date(d); return isNaN(dt) ? d : dt.toLocaleString('en-ZA'); }
+// Explicit dd/mm/yyyy formatting — never relies on toLocaleString(),
+// which renders inconsistently across browsers/OSes/locales even with
+// 'en-ZA' specified. This is the one true date format across the app.
+function fmtDate(d) {
+  if (!d) return '';
+  const dt = new Date(d);
+  if (isNaN(dt)) return String(d);
+  const dd = String(dt.getDate()).padStart(2, '0');
+  const mm = String(dt.getMonth() + 1).padStart(2, '0');
+  const yyyy = dt.getFullYear();
+  const hh = String(dt.getHours()).padStart(2, '0');
+  const min = String(dt.getMinutes()).padStart(2, '0');
+  const hasTime = dt.getHours() !== 0 || dt.getMinutes() !== 0;
+  return hasTime ? `${dd}/${mm}/${yyyy} ${hh}:${min}` : `${dd}/${mm}/${yyyy}`;
+}
 function toLocalInput(d) { if (!d) return ''; const dt = new Date(d); if (isNaN(dt)) return ''; return dt.toISOString().slice(0, 16); }
 function escapeHtml(s) { return String(s == null ? '' : s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
 function escapeAttr(s) { return escapeHtml(s); }
+
+// Converts a South African local number (082...) to the international
+// form wa.me needs (27...), and pre-addresses a short message.
+function whatsappLink(phone, name) {
+  let digits = String(phone || '').replace(/\D/g, '');
+  if (digits.startsWith('0')) digits = '27' + digits.slice(1);
+  const msg = encodeURIComponent(`Hi ${name || ''}, this is the hall manager regarding your booking.`);
+  return digits ? `https://wa.me/${digits}?text=${msg}` : '#';
+}

@@ -38,6 +38,11 @@ button:disabled { opacity: 0.6; cursor: wait; }
 .tab-btn.active { background: var(--accent-soft); color: var(--accent); }
 .logout-btn { background: transparent; color: var(--grey); font-size: 0.85rem; padding: 6px 10px; }
 main { max-width: 900px; margin: 0 auto; padding: 18px; }
+/* The calendar benefits far more from horizontal space than the
+   applications list does, so give it a wider container on desktop. */
+@media (min-width: 900px) {
+  main:has(#calendarView.active) { max-width: 1400px; }
+}
 .view { display: none; }
 .view.active { display: block; }
 .empty-state { color: var(--grey); text-align: center; padding: 40px 0; }
@@ -127,8 +132,14 @@ main { max-width: 900px; margin: 0 auto; padding: 18px; }
 
 .fc { background: var(--card); border-radius: 12px; padding: 10px; border: 1px solid var(--line); }
 .fc-event { border: none !important; font-size: 0.78rem; }
-.fc-evt-wrap { display: flex; align-items: center; gap: 4px; padding: 1px 3px; overflow: hidden; }
-.fc-evt-label { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: #23291f; }
+.fc-evt-wrap { display: flex; align-items: flex-start; gap: 4px; padding: 1px 3px; overflow: hidden; }
+/* Wrap onto a second line before truncating with an ellipsis, rather
+   than cutting off after one line — most event titles fit in two. */
+.fc-evt-label {
+  overflow: hidden; color: #23291f;
+  display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical;
+  white-space: normal; word-break: break-word; line-height: 1.2;
+}
 
 .evt-pending { background: #fbeecb !important; }
 .evt-accepted { background: var(--accent-soft) !important; }
@@ -144,3 +155,26 @@ main { max-width: 900px; margin: 0 auto; padding: 18px; }
 .paybadge.partial-pay { border: 2px solid #2f6fa3; background: linear-gradient(90deg, #2f6fa3 50%, transparent 50%); }
 .paybadge.paid-pay { background: #2f6fa3; color: #fff; }
 
+
+/* ---------- Newly added UI elements (help, filters, status line, quote-params toggle, custom items, 2-col layout) ---------- */
+.filter-chip-secondary { background: var(--card); border: 1px solid var(--line); padding: 6px 12px; border-radius: 20px; font-size: 0.8rem; color: var(--grey); }
+.filter-chip-secondary.active { background: #2f6fa3; color: #fff; border-color: #2f6fa3; }
+
+.status-line { display: flex; align-items: center; gap: 8px; margin-bottom: 4px; }
+.status-line h3 { margin: 0; }
+
+#toggleQuoteParamsBtn { margin-bottom: 10px; }
+#quoteParamsBody.hidden { display: none; }
+.detail-section-sub { margin: 14px 0; }
+
+.two-col-section { display: grid; grid-template-columns: 1fr 1fr; gap: 0 20px; margin: 10px 0; align-items: start; }
+.guard-time-col { display: flex; flex-direction: column; }
+.sectional-layout-img { width: 100%; max-width: 260px; border-radius: 8px; border: 1px solid var(--line); margin-top: 6px; }
+
+.custom-item-row { display: flex; gap: 8px; align-items: center; margin-bottom: 6px; }
+.custom-item-row input { margin-top: 0; }
+.custom-item-name { flex: 1; }
+
+@media (max-width: 700px) {
+  .two-col-section { grid-template-columns: 1fr; }
+}
