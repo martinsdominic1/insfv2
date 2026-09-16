@@ -53,3 +53,18 @@ main { max-width: 900px; margin: 0 auto; padding: 18px; }
   .topbar { padding: 12px 14px; }
   main { padding: 12px; }
 }
+
+/* Read-only applicant card modal */
+.modal { position: fixed; inset: 0; background: rgba(20,24,20,0.45); display: flex; align-items: flex-start; justify-content: center; padding: 24px 14px; overflow-y: auto; z-index: 50; }
+.modal-card { background: var(--card); border-radius: 14px; padding: 22px; width: 100%; max-width: 520px; }
+.modal-card.wide { max-width: 640px; }
+.detail-section { border-top: 1px solid var(--line); margin-top: 14px; padding-top: 12px; }
+.field-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 0 14px; }
+.field-grid label, .field-grid div { font-size: 0.82rem; color: var(--grey); margin-bottom: 10px; }
+.field-grid strong { color: var(--ink); font-weight: 600; display: block; font-size: 0.95rem; }
+.modal-close-row { text-align: right; margin-top: 14px; }
+.pill { font-size: 0.72rem; font-weight: 700; padding: 3px 9px; border-radius: 20px; text-transform: uppercase; }
+.pill-pending { background: #fbeecb; color: #8a5f0c; }
+.pill-accepted { background: var(--accent-soft); color: var(--accent); }
+.pill-denied { background: #f6dcd9; color: var(--red); }
+.pill-cancelled { background: #eceae3; color: var(--grey); }

@@ -24,6 +24,7 @@ const Api = (() => {
   return {
     getToken, setToken, login, logout,
     getApplications: () => call('getApplications'),
-    getBlocks: () => call('getBlocks')
+    getBlocks: () => call('getBlocks'),
+    sendPartialSummary: () => call('sendPartialSummary')
   };
 })();

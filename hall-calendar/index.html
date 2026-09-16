@@ -31,6 +31,7 @@
   </header>
   <main>
     <p class="hint">Read-only — no editing available on this page.</p>
+    <button id="partialSummaryBtn" class="secondary-btn">Send month's summary so far (to me only)</button>
     <div class="legend">
       <span class="legend-item"><i class="dot pending"></i>Pending</span>
       <span class="legend-item"><i class="dot accepted"></i>Accepted</span>
@@ -41,6 +42,11 @@
     </div>
     <div id="calendar"></div>
   </main>
+</div>
+
+<!-- ============ READ-ONLY APPLICANT CARD ============ -->
+<div id="detailModal" class="modal hidden">
+  <div class="modal-card wide" id="detailModalCard"></div>
 </div>
 
 <script src="https://cdn.jsdelivr.net/npm/fullcalendar@6.1.11/index.global.min.js"></script>
