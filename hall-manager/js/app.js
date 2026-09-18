@@ -1,7 +1,7 @@
 let STATE = {
   applications: [],
   blocks: [],
-  config: { reasons: [], rateLines: [], floorSections: [], depositDefaultPct: 20, discountMinPct: -200, discountMaxPct: 200, vatRatePct: 15 },
+  config: { reasons: [], rateLines: [], floorSections: [], additionalAreas: [], depositDefaultPct: 20, discountMinPct: -200, discountMaxPct: 200, vatRatePct: 15 },
   currentFilter: 'all',
   secondaryFilter: 'all',
   searchText: '',
@@ -18,9 +18,6 @@ const TABLE_ITEMS = [
 ];
 const QUOTE_ITEMS = [
   { field: 'ChairCount', item: 'Chairs', label: 'Chairs', type: 'number' },
-  { field: 'StageRequired', item: 'Stage', label: 'Stage', type: 'yesno' },
-  { field: 'KitchenRequired', item: 'Kitchen', label: 'Kitchen', type: 'yesno' },
-  { field: 'TuckshopRequired', item: 'Tuckshop', label: 'Tuckshop', type: 'yesno' },
   { field: 'MainPlates', item: 'Main Plates', label: 'Main plates', type: 'number' },
   { field: 'SidePlates', item: 'Side Plates', label: 'Side plates', type: 'number' },
   { field: 'Knives', item: 'Knives', label: 'Knives (packs of 10)', type: 'number' },
@@ -275,7 +272,7 @@ function renderDetail(card, a, isNew) {
         ${renderQuoteFields(a, editing)}
         <div class="two-col-section">
           <div class="floor-section-picker">
-            <label class="section-heading-label">Floor Section(s) — select all that apply</label>
+            <label class="section-heading-label">Floor Section(s) & Other Hourly Areas — select all that apply</label>
             ${renderFloorSectionCheckboxes(a, editing)}
           </div>
           <div class="guard-time-col">
@@ -291,12 +288,12 @@ function renderDetail(card, a, isNew) {
           ${editing ? '<button type="button" id="addCustomItemBtn" class="secondary-btn">+ Add custom item</button>' : ''}
         </div>
         <div class="field-grid">
-          <label>Overall discount %
+          <label>Overall discount % (${STATE.config.discountMinPct} to ${STATE.config.discountMaxPct})
             <input type="number" data-field="OverallDiscountPct" value="${Number(a.OverallDiscountPct) || 0}" ${editing ? '' : 'disabled'}
                    min="${STATE.config.discountMinPct}" max="${STATE.config.discountMaxPct}">
           </label>
           <label>Deposit %
-            <input type="number" data-field="DepositPct" value="${a.DepositPct != null ? a.DepositPct : STATE.config.depositDefaultPct}" ${editing ? '' : 'disabled'} min="0" max="100">
+            <input type="number" data-field="DepositPct" value="${(a.DepositPct !== '' && a.DepositPct != null) ? a.DepositPct : STATE.config.depositDefaultPct}" ${editing ? '' : 'disabled'} min="0" max="100">
           </label>
         </div>
       </div>
@@ -394,15 +391,21 @@ function renderFloorSectionCheckboxes(a, editing) {
   let discounts = {};
   try { discounts = JSON.parse(a.LineDiscountsJSON || '{}'); } catch (e) {}
   const selected = String(a.FloorSection || '').split(',').map(s => s.trim()).filter(Boolean);
-  return STATE.config.floorSections.map(s => {
-    const isChecked = selected.includes(s.section);
+  // Floor sections (A/B/C/D1-D3) and the additional hourly areas
+  // (Stage/Kitchen/Serving 1/Serving 2) share the same picker and the
+  // same comma-separated FloorSection field — they're priced identically
+  // (hourly), just labelled slightly differently.
+  const combined = STATE.config.floorSections.map(s => ({ code: s.section, rate: s.rate, label: 'Section ' + s.section }))
+    .concat(STATE.config.additionalAreas.map(s => ({ code: s.section, rate: s.rate, label: s.section })));
+  return combined.map(s => {
+    const isChecked = selected.includes(s.code);
     if (!editing && !isChecked) return '';
     return `<div class="quote-row">
       <label class="quote-label">
-        <input type="checkbox" class="floor-section-checkbox" data-section="${s.section}" ${isChecked ? 'checked' : ''} ${editing ? '' : 'disabled'}>
-        Section ${s.section} (R${s.rate})
+        <input type="checkbox" class="floor-section-checkbox" data-section="${s.code}" ${isChecked ? 'checked' : ''} ${editing ? '' : 'disabled'}>
+        ${s.label} (R${s.rate}/hr)
       </label>
-      ${editing ? discountInput('Floor Section ' + s.section, discounts['Floor Section ' + s.section]) : ''}
+      ${editing ? discountInput('Floor Section ' + s.code, discounts['Floor Section ' + s.code]) : ''}
     </div>`;
   }).join('') || (!editing ? '<p class="hint">No section selected yet.</p>' : '');
 }
@@ -424,11 +427,27 @@ function renderStatusSection(a) {
       ${isAccepted ? '<button class="secondary-btn" data-act="cancel">Cancel</button>' : ''}
     </div>
     ${a.DenialReason ? `<p class="hint">Reason on file: ${escapeHtml(a.DenialReason)}${a.DenialReasonOther ? ' — ' + escapeHtml(a.DenialReasonOther) : ''}</p>` : ''}
-    ${a.RefundAmount ? `<p class="hint">Refund: R${Number(a.RefundAmount).toFixed(2)} (${a.RefundStatus})</p>` : ''}
     <div class="status-row">
       <button class="secondary-btn" data-act="addSetup">+ Add Setup</button>
       <button class="secondary-btn" data-act="addTeardown">+ Add Teardown</button>
     </div>
+  </div>
+  ${Number(a.RefundAmount) > 0 ? renderRefundSection(a) : ''}`;
+}
+
+// Mirrors the payment section's own pattern: the manager records how
+// much has actually gone back to the applicant so far, and the status
+// is always auto-computed from that — never set directly.
+function renderRefundSection(a) {
+  return `<div class="detail-section">
+    <h3>Refund <span class="pill pill-${slug(a.RefundStatus || 'Pending')}">${a.RefundStatus || 'Pending'}</span></h3>
+    <div class="field-grid">
+      <div>Total refund owed: <strong>R${Number(a.RefundAmount).toFixed(2)}</strong></div>
+      <label>Refunded so far (R)
+        <input type="number" id="refundPaidInput" data-numeric="true" value="${a.RefundAmountPaid || 0}" min="0" step="0.01">
+      </label>
+    </div>
+    <button id="saveRefundBtn" class="secondary-btn">Save Refund</button>
   </div>`;
 }
 
@@ -447,7 +466,8 @@ function renderEmailSection(a) {
 
 function renderPaymentSection(a) {
   return `<div class="detail-section">
-    <h3>Payment <span class="pill pill-pay pill-${slug(a.PaymentStatus)}">${a.PaymentStatus || 'Pending'}</span></h3>
+    <h3>Rental Payment <span class="pill pill-pay pill-${slug(a.PaymentStatus)}">${a.PaymentStatus || 'Pending'}</span></h3>
+    <p class="hint">For the original booking quote only — additional charges (damages, overage, sundries) have their own payment tracking below.</p>
     <div class="field-grid">
       <div>Amount due: <strong>R${Number(a.AmountDue || 0).toFixed(2)}</strong></div>
       <label>Amount received (R)
@@ -545,7 +565,7 @@ function updateUnseatedAndCaps(card) {
   const seated = get('RoundTableCount') * 10 + get('RectTableCount') * 10 + get('LongRectTableCount') * 10; // Config default capacity=10; real per-item capacity is applied server-side on Generate Price
   const unseated = guestCount - seated;
   const line = card.querySelector('#unseatedLine');
-  if (line) line.textContent = 'Unseated guests (informational): ' + unseated;
+  if (line) line.textContent = 'Unseated guests (informational, based on default capacities — final figure confirmed on Generate Price): ' + unseated;
 
   const warnings = [];
   QUOTE_ITEMS.forEach(qi => {
@@ -635,6 +655,15 @@ function wireDetailInteractions(card, a, isNew, editing) {
         if (res.justBecamePaid) { document.getElementById('detailModal').classList.add('hidden'); openEmailPopup(a.ID, 'PaymentThankYou'); }
         else openDetail(a.ID);
       } else alert(res.error || 'Could not save payment');
+    }));
+
+    const refundBtn = document.getElementById('saveRefundBtn');
+    if (refundBtn) refundBtn.addEventListener('click', () => withButtonLoading(refundBtn, 'Saving…', async () => {
+      const amount = Number(document.getElementById('refundPaidInput').value);
+      if (isNaN(amount) || amount < 0) { alert('Enter a valid amount.'); return; }
+      const res = await Api.logRefund(a.ID, amount);
+      if (res.ok) { await loadAll(); openDetail(a.ID); }
+      else alert(res.error || 'Could not save refund');
     }));
 
     const proofInput = document.getElementById('proofUploadInput');
@@ -741,7 +770,7 @@ function wireEmailModal() {
 async function finishEmail(action) {
   const pending = STATE.pendingEmail;
   const btn = action === 'send' ? document.getElementById('emailSendBtn') : action === 'draft' ? document.getElementById('emailDraftBtn') : document.getElementById('emailCancelBtn');
-  await withButtonLoading(btn, action === 'send' ? 'Sending…' : action === 'draft' ? 'Saving…' : 'Cancelling…', async () => {
+  await withButtonLoading(btn, action === 'send' ? 'Sending…' : action === 'draft' ? 'Saving…' : 'Closing…', async () => {
     if (action !== 'cancel' && pending) {
       const res = await Api.dispatchEmail(pending.id, pending.emailType,
         document.getElementById('emailSubject').value, document.getElementById('emailBody').value, action);
@@ -800,11 +829,20 @@ function openBlockModal(existingId, prefill) {
   document.getElementById('blockStart').value = prefill?.startDateTime ? (existingId ? toLocalInput(prefill.startDateTime) : prefill.startDateTime) : '';
   document.getElementById('blockEnd').value = prefill?.endDateTime ? (existingId ? toLocalInput(prefill.endDateTime) : prefill.endDateTime) : '';
   document.getElementById('blockNotes').value = prefill?.notes || '';
+  document.getElementById('blockDeleteBtn').classList.toggle('hidden', !existingId);
   document.getElementById('blockModal').classList.remove('hidden');
 }
 function wireBlockModal() {
   document.getElementById('addBlockBtn')?.addEventListener('click', () => openBlockModal(null, { type: 'Internal' }));
   document.getElementById('blockCancelBtn').addEventListener('click', () => document.getElementById('blockModal').classList.add('hidden'));
+  document.getElementById('blockDeleteBtn').addEventListener('click', () => withButtonLoading(document.getElementById('blockDeleteBtn'), 'Deleting…', async () => {
+    const id = document.getElementById('blockModal').dataset.blockId;
+    if (!id) return;
+    if (!confirm('Delete this block? This cannot be undone.')) return;
+    const res = await Api.deleteBlock(id);
+    document.getElementById('blockModal').classList.add('hidden');
+    if (res.ok) await loadAll(); else alert(res.error || 'Could not delete block');
+  }));
   document.getElementById('blockSaveBtn').addEventListener('click', () => withButtonLoading(document.getElementById('blockSaveBtn'), 'Saving…', async () => {
     const id = document.getElementById('blockModal').dataset.blockId;
     const block = {
@@ -830,20 +868,47 @@ async function loadCharges(card, applicationId) {
   if (!list) return;
   if (!res.ok || !res.charges.length) { list.innerHTML = '<p class="hint">No additional charges recorded.</p>'; return; }
   list.innerHTML = res.charges.map(c => `
-    <div class="charge-row">
+    <div class="charge-row" data-charge-id="${c.ID}">
       <span>${escapeHtml(c.ItemType === 'Catalog' ? c.CatalogItemName + ' x' + c.Quantity : c.Description)}</span>
       <span>R${Number(c.Amount).toFixed(2)}</span>
-      <span class="pill pill-${slug(c.PaymentStatus)}">${c.PaymentStatus}</span>
+      <button class="pill pill-${slug(c.PaymentStatus)} toggle-charge-paid" data-id="${c.ID}" data-status="${c.PaymentStatus}" title="Click to toggle paid/pending">${c.PaymentStatus}</button>
+      <button class="icon-btn edit-charge-btn" data-id="${c.ID}" title="Edit">✏️</button>
+      <button class="icon-btn danger-btn delete-charge-btn" data-id="${c.ID}" title="Delete">✕</button>
     </div>`).join('');
+
+  list.querySelectorAll('.toggle-charge-paid').forEach(btn => btn.addEventListener('click', () => withButtonLoading(btn, '…', async () => {
+    const newStatus = btn.dataset.status === 'Paid' ? 'Pending' : 'Paid';
+    const res2 = await Api.updateCharge(btn.dataset.id, { PaymentStatus: newStatus }, applicationId);
+    if (res2.ok) loadCharges(card, applicationId); else alert(res2.error || 'Could not update payment status');
+  })));
+  list.querySelectorAll('.edit-charge-btn').forEach(btn => btn.addEventListener('click', () => {
+    const charge = res.charges.find(c => c.ID === btn.dataset.id);
+    openChargeModal(applicationId, charge);
+  }));
+  list.querySelectorAll('.delete-charge-btn').forEach(btn => btn.addEventListener('click', () => withButtonLoading(btn, '…', async () => {
+    if (!confirm('Delete this charge? This cannot be undone.')) return;
+    const res2 = await Api.deleteCharge(btn.dataset.id, applicationId);
+    if (res2.ok) loadCharges(card, applicationId); else alert(res2.error || 'Could not delete charge');
+  })));
 }
-function openChargeModal(applicationId) {
+function openChargeModal(applicationId, existingCharge) {
   const sel = document.getElementById('chargeCatalogItem');
   sel.innerHTML = STATE.config.rateLines.filter(r => r.active).map(r => `<option value="${escapeAttr(r.item)}">${escapeHtml(r.item)} (R${r.rate})</option>`).join('');
-  document.getElementById('chargeType').value = 'Catalog';
-  document.getElementById('chargeCatalogWrap').classList.remove('hidden');
-  document.getElementById('chargeCustomWrap').classList.add('hidden');
+  const isCatalog = !existingCharge || existingCharge.ItemType === 'Catalog';
+  document.getElementById('chargeType').value = isCatalog ? 'Catalog' : 'Custom';
+  document.getElementById('chargeCatalogWrap').classList.toggle('hidden', !isCatalog);
+  document.getElementById('chargeCustomWrap').classList.toggle('hidden', isCatalog);
+  if (existingCharge) {
+    if (isCatalog) { sel.value = existingCharge.CatalogItemName; document.getElementById('chargeQty').value = existingCharge.Quantity; }
+    else { document.getElementById('chargeDescription').value = existingCharge.Description; document.getElementById('chargeAmount').value = existingCharge.Amount; }
+  } else {
+    document.getElementById('chargeQty').value = 1;
+    document.getElementById('chargeDescription').value = '';
+    document.getElementById('chargeAmount').value = '';
+  }
   document.getElementById('chargeModal').classList.remove('hidden');
   document.getElementById('chargeModal').dataset.applicationId = applicationId;
+  document.getElementById('chargeModal').dataset.chargeId = existingCharge ? existingCharge.ID : '';
 }
 function wireChargeModal() {
   document.getElementById('chargeType').addEventListener('change', (e) => {
@@ -854,13 +919,22 @@ function wireChargeModal() {
   document.getElementById('chargeCancelBtn').addEventListener('click', () => document.getElementById('chargeModal').classList.add('hidden'));
   document.getElementById('chargeSaveBtn').addEventListener('click', () => withButtonLoading(document.getElementById('chargeSaveBtn'), 'Saving…', async () => {
     const applicationId = document.getElementById('chargeModal').dataset.applicationId;
+    const chargeId = document.getElementById('chargeModal').dataset.chargeId;
     const isCatalog = document.getElementById('chargeType').value === 'Catalog';
-    const payload = { applicationId, itemType: isCatalog ? 'Catalog' : 'Custom' };
-    if (isCatalog) { payload.catalogItemName = document.getElementById('chargeCatalogItem').value; payload.quantity = document.getElementById('chargeQty').value; }
-    else { payload.description = document.getElementById('chargeDescription').value; payload.amount = document.getElementById('chargeAmount').value; }
-    const res = await Api.addCharge(payload);
+    let res;
+    if (chargeId) {
+      const fields = isCatalog
+        ? { ItemType: 'Catalog', CatalogItemName: document.getElementById('chargeCatalogItem').value, Quantity: document.getElementById('chargeQty').value }
+        : { ItemType: 'Custom', Description: document.getElementById('chargeDescription').value, Amount: document.getElementById('chargeAmount').value };
+      res = await Api.updateCharge(chargeId, fields, applicationId);
+    } else {
+      const payload = { applicationId, itemType: isCatalog ? 'Catalog' : 'Custom' };
+      if (isCatalog) { payload.catalogItemName = document.getElementById('chargeCatalogItem').value; payload.quantity = document.getElementById('chargeQty').value; }
+      else { payload.description = document.getElementById('chargeDescription').value; payload.amount = document.getElementById('chargeAmount').value; }
+      res = await Api.addCharge(payload);
+    }
     document.getElementById('chargeModal').classList.add('hidden');
-    if (res.ok) openDetail(applicationId); else alert(res.error || 'Could not add charge');
+    if (res.ok) openDetail(applicationId); else alert(res.error || 'Could not save charge');
   }));
 }
 

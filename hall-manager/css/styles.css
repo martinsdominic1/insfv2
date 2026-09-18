@@ -16,6 +16,8 @@ button { font: inherit; cursor: pointer; border: none; border-radius: 8px; }
 button:disabled { opacity: 0.6; cursor: wait; }
 .primary-btn { background: var(--accent); color: #fff; padding: 10px 16px; font-weight: 600; }
 .secondary-btn { background: var(--accent-soft); color: var(--accent); padding: 9px 14px; font-weight: 600; margin: 3px; }
+.danger-btn { background: #F6DCD9; color: var(--red); padding: 9px 14px; font-weight: 600; margin: 3px; }
+.danger-btn:hover { background: #EFC3BE; }
 .icon-btn { background: transparent; color: var(--accent); font-weight: 600; padding: 6px 10px; }
 
 /* Loading overlay */
@@ -72,6 +74,7 @@ main { max-width: 900px; margin: 0 auto; padding: 18px; }
 .pill-cancelled { background: #eceae3; color: var(--grey); }
 .pill-paid { background: var(--accent-soft); color: var(--accent); }
 .pill-partial { background: #fbeecb; color: #8a5f0c; }
+.pill-completed { background: var(--accent-soft); color: var(--accent); }
 
 /* Modals */
 .modal { position: fixed; inset: 0; background: rgba(20,24,20,0.45); display: flex; align-items: flex-start; justify-content: center; padding: 24px 14px; overflow-y: auto; z-index: 50; }

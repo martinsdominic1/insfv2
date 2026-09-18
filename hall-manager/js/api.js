@@ -34,14 +34,17 @@ const Api = (() => {
     setStatus: (id, status, reason, reasonOther, refundAmount, refundStatus) =>
       call('setStatus', { id, status, reason, reasonOther, refundAmount, refundStatus }),
     logPayment: (id, amountReceived) => call('logPayment', { id, amountReceived }),
+    logRefund: (id, refundAmountPaid) => call('logRefund', { id, refundAmountPaid }),
 
     getBlocks: () => call('getBlocks'),
     createBlock: (block) => call('createBlock', block),
     updateBlock: (id, fields) => call('updateBlock', { id, fields }),
+    deleteBlock: (id) => call('deleteBlock', { id }),
 
     getCharges: (applicationId) => call('getCharges', { applicationId }),
     addCharge: (charge) => call('addCharge', charge),
     updateCharge: (id, fields, applicationId) => call('updateCharge', { id, fields, applicationId }),
+    deleteCharge: (id, applicationId) => call('deleteCharge', { id, applicationId }),
 
     prepareEmail: (id, emailType) => call('prepareEmail', { id, emailType }),
     dispatchEmail: (id, emailType, subject, body, action) => call('dispatchEmail', { id, emailType, subject, body, emailAction: action }),
